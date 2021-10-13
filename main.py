@@ -12,45 +12,45 @@
 
 import csv
 import requests
-import datetime
+from datetime import datetime, timedelta
 
 base_url = "https://api.polygon.io"
 
 
 def consume_api():
-
     ticker_code = "AAPL"
     start_date = '2020-01-01'
     end_date = '2020-12-31'
     timespan = "month"
     multiplier = "1"
-    ts_result = {'date':[], 'close_price': []}
-    api_response = do_api_request(f"{base_url}/v2/aggs/ticker/{ticker_code}/range/{multiplier}/{timespan}/{start_date}/{end_date}")
 
-    for i in api_response.get('results'):
-        for key, value in i.items():
-            if key == 't':
-                ts_result['date'].append(i.get(key))
-            elif key == 'c':
-                ts_result['close_price'].append(i.get(key))
-    return ts_result
+    url = f"{base_url}/v2/aggs/ticker/{ticker_code}/range/{multiplier}/{timespan}/{start_date}/{end_date}"
+    api_response_results = do_api_request(url).get("results")
+
+    stock_results = []
+    for result in api_response_results:
+        entry_price = result.get("c")
+        raw_date = datetime(1970, 1, 1) + timedelta(milliseconds=result.get("t"))
+        entry_date = raw_date.strftime("%d-%m-%Y")
+        stock_results.append({"date": entry_date, "close_price": entry_price})
+
+    return stock_results
 
 
 def do_api_request(url):
-
     return requests.get(url, params={"apiKey": "VIHLKoUL4Adg3jVwYXSnUu3phXlsM74U"}).json()
 
 
-def parse_to_csv(results: dict):
+def parse_to_csv(results: list):
     csv_file = open("stock_timeseries.csv", "w")
 
     writer = csv.writer(csv_file)
-    writer.writerow(['Date', 'Close Price'])
-    price_history = {}
 
-    for key, value in results.items():
-        if key == 'date':
-            a = 5
+    header = results[0].keys()
+    writer.writerow(list(header))
+
+    for entry in results:
+        writer.writerow([entry.get("date"), entry.get("close_price")])
 
     csv_file.close()
 
